@@ -1,0 +1,16 @@
+# Segurança
+.env
+
+# Banco de Dados e Cache
+*.db
+geocode_cache*
+
+# Logs
+*.log
+
+# Ambientes Virtuais e Cache do Python
+venv/
+env/
+ambiente_bot/
+.venv/
+__pycache__/
