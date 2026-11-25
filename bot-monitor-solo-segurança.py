@@ -153,7 +153,8 @@ def obter_dados_climaticos(lat: float, lon: float) -> Optional[DadosClimaticos]:
             "chuva": res["hourly"]["precipitation"],
             "prob": res["hourly"].get("precipitation_probability", [0] * len(res["hourly"]["time"]))
         })
-        agora = pd.to_datetime(datetime.now().strftime("%Y-%m-%d %H:00:00"))
+        agora_sp = datetime.now(timezone(timedelta(hours=-3))).replace(tzinfo=None)
+        agora = pd.to_datetime(agora_sp.strftime("%Y-%m-%d %H:00:00"))
         acumulado_72h = df[df["hora"] <= agora].tail(72)["chuva"].sum()
         previsao_3h   = df[df["hora"] > agora].head(3)["chuva"].sum()
         chance_chuva  = df[df["hora"] > agora].head(3)["prob"].max()
@@ -178,11 +179,23 @@ def _get_inmet(endpoint: str) -> list:
     resp.raise_for_status()
     return resp.json()
 
+_inmet_estacoes_cache: dict = {"dados": None, "expira_em": 0.0}
+_INMET_CACHE_TTL_SEGUNDOS: int = 6 * 3600
+
+def _obter_estacoes_inmet() -> list:
+    agora = time.monotonic()
+    if _inmet_estacoes_cache["dados"] is not None and agora < _inmet_estacoes_cache["expira_em"]:
+        return _inmet_estacoes_cache["dados"]
+    estacoes = _get_inmet("/estacoes/T")
+    _inmet_estacoes_cache["dados"] = estacoes
+    _inmet_estacoes_cache["expira_em"] = agora + _INMET_CACHE_TTL_SEGUNDOS
+    return estacoes
+
 def busca_sensor_fisico(lat: float, lon: float, uf: str) -> Optional[float]:
     if not uf:
         return None
     try:
-        estacoes = _get_inmet("/estacoes/T")
+        estacoes = _obter_estacoes_inmet()
         mais_proxima, menor_dist = None, float("inf")
         for est in estacoes:
             lat_e = float(est.get("VL_LATITUDE") or est.get("lat") or 0)
@@ -359,6 +372,7 @@ def ciclo_de_alertas(bot: telebot.TeleBot) -> None:
                         try:
                             bot.send_message(chat_id, mensagem, parse_mode="Markdown")
                             conn.execute("UPDATE usuarios SET memoria_alerta = ? WHERE chat_id = ?", (novo_nivel, chat_id))
+                            time.sleep(0.05)
                         except Exception as e:
                             logger.error(f"Erro envio chat_id={chat_id}: {e}")
         except Exception as e:
