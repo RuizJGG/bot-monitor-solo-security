@@ -325,7 +325,8 @@ def _exibir_clima(chat_id: int, bot: telebot.TeleBot, message_id: Optional[int] 
     status_icons = {1: "🟢 Seguro", 2: "🟡 Atenção", 3: "🟠 Alerta", 4: "🔴 Crítico"}
 
     txt_sensor_str = f"\n• *Sensor Físico (INMET):* {chuva_sensor:.1f} mm/h ✅" if chuva_sensor is not None else ""
-    texto = (f"📊 *Relatório Climático*\n📍 {user['cidade']}\n🕐 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n\n"
+    agora_brt = datetime.now(timezone(timedelta(hours=-3))).strftime('%d/%m/%Y %H:%M')
+    texto = (f"📊 *Relatório Climático*\n📍 {user['cidade']}\n🕐 {agora_brt}\n\n"
              f"• *Chuva agora:* {c_now:.1f} mm/h\n• *Probabilidade (3h):* {prob:.0f}%\n"
              f"• *Acumulado (72h):* {ac_72h:.1f} mm\n• *Umidade do Solo:* {txt_solo}{txt_sensor_str}\n\n"
              f"*Status atual:* {status_icons.get(nivel, '—')}")
